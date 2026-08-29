@@ -1,0 +1,9 @@
+# Optional local assistant (project chat).
+# On Windows, prefer the prebuilt CPU wheel index so pip does not compile from source.
+#
+#   pip install -r llm/requirements-assistant.txt --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+#
+# Or run:  tools/install-assistant.cmd
+
+--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+llama-cpp-python>=0.2.90

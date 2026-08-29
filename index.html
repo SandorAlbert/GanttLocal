@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>GanttLocal</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-outdent" viewBox="0 0 16 16"><path d="M6.5 3.5h8M6.5 8h8M6.5 12.5h8"/><path d="M4 5.5 1.5 8 4 10.5"/></symbol>
+  <symbol id="i-indent" viewBox="0 0 16 16"><path d="M6.5 3.5h8M6.5 8h8M6.5 12.5h8"/><path d="M1.5 5.5 4 8l-2.5 2.5"/></symbol>
+  <symbol id="i-up" viewBox="0 0 16 16"><path d="M8 13V3.6M4.4 7.2 8 3.6l3.6 3.6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M8 3v9.4M4.4 8.8 8 12.4l3.6-3.6"/></symbol>
+  <symbol id="i-link" viewBox="0 0 16 16"><path d="M6.4 9.6l3.2-3.2"/><path d="M9.1 4.8l1.1-1.1a2.4 2.4 0 0 1 3.4 3.4l-1.1 1.1"/><path d="M6.9 11.2l-1.1 1.1a2.4 2.4 0 0 1-3.4-3.4l1.1-1.1"/></symbol>
+  <symbol id="i-unlink" viewBox="0 0 16 16"><path d="M9.4 4.5l0.8-0.8a2.4 2.4 0 0 1 3.4 3.4l-0.8 0.8"/><path d="M6.6 11.5l-0.8 0.8a2.4 2.4 0 0 1-3.4-3.4l0.8-0.8"/><path d="M11.6 11.6l1.6 1.6M4.4 4.4 2.8 2.8"/></symbol>
+  <symbol id="i-collapse" viewBox="0 0 16 16"><path d="M4 8.6 8 5l4 3.6"/><path d="M4 12.6 8 9l4 3.6"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 16 16"><path d="M4 7 8 10.6 12 7"/><path d="M4 3 8 6.6 12 3"/></symbol>
+  <symbol id="i-fit-cols" viewBox="0 0 16 16"><path d="M2 8h12"/><path d="M4.5 5.5 2 8l2.5 2.5"/><path d="M11.5 5.5 14 8l-2.5 2.5"/></symbol>
+</svg>
+
+<div id="app">
+
+  <div id="toolbar">
+    <span class="grp" data-edit>
+      <select id="projectSelect" title="Open another project file"></select>
+      <button id="btnNewProject" title="Create a new project file">New</button>
+    </span>
+    <span class="grp" data-edit>
+      <button id="btnAdd" title="Insert a task below the selected one (Ins)">Task</button>
+      <button id="btnMilestone" title="Turn the selected task into a milestone, or back (0 days)">Milestone</button>
+      <button id="btnDelete" title="Delete the selected tasks (Del)">Delete</button>
+    </span>
+    <span class="grp" data-edit>
+      <button id="btnOutdent" class="ico" title="Move out one level (Alt+Shift+Left)"><svg><use href="#i-outdent"></use></svg></button>
+      <button id="btnIndent" class="ico" title="Move in one level, making the task above a summary (Alt+Shift+Right)"><svg><use href="#i-indent"></use></svg></button>
+      <button id="btnUp" class="ico" title="Move row up (Alt+Shift+Up)"><svg><use href="#i-up"></use></svg></button>
+      <button id="btnDown" class="ico" title="Move row down (Alt+Shift+Down)"><svg><use href="#i-down"></use></svg></button>
+    </span>
+    <span class="grp" data-edit>
+      <button id="btnLink" class="ico" title="Chain the selected tasks one after another (Ctrl+L)"><svg><use href="#i-link"></use></svg></button>
+      <button id="btnUnlink" class="ico" title="Remove the dependencies between the selected tasks"><svg><use href="#i-unlink"></use></svg></button>
+    </span>
+    <span class="grp" data-view>
+      <span class="seg" id="zoomGroup">
+        <button data-zoom="day">Day</button>
+        <button data-zoom="week">Week</button>
+        <button data-zoom="month">Month</button>
+        <button data-zoom="quarter">Quarter</button>
+      </span>
+      <button id="btnToday" title="Scroll the chart to today">Today</button>
+      <button id="btnCollapse" class="ico" title="Collapse all summary tasks"><svg><use href="#i-collapse"></use></svg></button>
+      <button id="btnExpand" class="ico" title="Expand everything"><svg><use href="#i-expand"></use></svg></button>
+    </span>
+    <span class="grp" data-edit>
+      <button id="btnUndo" title="Undo (Ctrl+Z)">Undo</button>
+      <button id="btnRedo" title="Redo (Ctrl+Y)">Redo</button>
+    </span>
+    <span class="spacer" data-view></span>
+    <span class="grp" data-view>
+      <button id="btnDetail" title="Show the details of the selected task (F4)">Details</button>
+      <button id="btnChat" data-edit title="Chat about this project">Chat</button>
+      <button id="btnSettings" data-edit title="Project settings: calendar, columns, file">Settings</button>
+      <button id="btnHelp" title="What the words mean, and every shortcut (F1)">Help</button>
+    </span>
+    <span id="saveState">&nbsp;</span>
+  </div>
+
+  <div id="main">
+    <div id="gridPane">
+      <div id="gridHead">
+        <button type="button" id="gridFitCols" class="ico" title="Fit all columns to the longest text" aria-label="Fit all columns to the longest text"><svg aria-hidden="true"><use href="#i-fit-cols"></use></svg></button>
+        <div id="gridHeadInner"></div>
+      </div>
+      <div id="gridBody" tabindex="0"><div id="gridRows"></div></div>
+    </div>
+    <div id="splitter" title="Drag to resize; double-click to fit the table to its contents"></div>
+    <div id="chartPane">
+      <canvas id="chartCanvas"></canvas>
+      <div id="chartScroll"><div id="chartSpacer"></div></div>
+    </div>
+
+    <aside id="panel" hidden>
+      <div class="panel-head">
+        <span id="panelTitle">Task</span>
+        <button id="panelClose" title="Close">&#215;</button>
+      </div>
+      <div class="panel-body">
+        <label>Name<input id="fName" autocomplete="off"></label>
+        <div class="two">
+          <label>Days<input id="fDuration" type="number" min="0" step="1"></label>
+          <label>% done<input id="fPct" type="number" min="0" max="100" step="5"></label>
+        </div>
+        <div class="two">
+          <label>Start<input id="fStart" autocomplete="off"></label>
+          <label>Finish<input id="fFinish" disabled></label>
+        </div>
+        <div class="two">
+          <label class="chk"><input type="checkbox" id="fMilestone">Milestone</label>
+          <label class="chk"><input type="checkbox" id="fManual">Manual</label>
+        </div>
+        <div class="two lead">
+          <label>Constraint
+            <select id="fConstraint">
+              <option value="ASAP">As soon as possible</option>
+              <option value="SNET">Start no earlier than</option>
+              <option value="FNLT">Finish no later than</option>
+              <option value="MSO">Must start on</option>
+            </select>
+          </label>
+          <label>Date<input id="fConstraintDate" autocomplete="off"></label>
+        </div>
+        <label>Notes<textarea id="fNotes" rows="3"></textarea></label>
+        <div class="sub">Depends on</div>
+        <div id="predList"></div>
+        <div class="row">
+          <input id="predInput" placeholder="3 or 3SS+2d" autocomplete="off">
+          <button id="predAdd">Add</button>
+        </div>
+        <p class="hint">Task id, then optionally a type (FS, SS, FF, SF) and a delay such as +2d. See Help &gt; Depends on.</p>
+        <div class="sub" id="customHead" hidden>Custom fields</div>
+        <div id="customList"></div>
+        <div id="panelMeta" class="meta"></div>
+      </div>
+    </aside>
+
+    <aside id="chatDock" hidden data-edit>
+      <div class="panel-head">
+        <span>Chat</span>
+        <button id="chatClose" title="Close">&#215;</button>
+      </div>
+      <div class="chat-body">
+        <div class="chat-status-row">
+          <div id="chatStatus" class="chat-status">Checking assistant…</div>
+          <div class="chat-help-wrap">
+            <button type="button" class="chat-help-btn" aria-describedby="chatOpsHelp" title="What you can ask">?</button>
+            <div id="chatOpsHelp" class="chat-help-tip" role="tooltip">
+              <div class="chat-help-title">Ask the assistant to…</div>
+              <ul>
+                <li><b>insert</b> – add tasks (phases and leaves)</li>
+                <li><b>patch</b> – rename, duration, %, notes, constraints</li>
+                <li><b>delete</b> – remove tasks</li>
+                <li><b>link / unlink</b> – FS/SS/FF/SF dependencies</li>
+                <li><b>indent / outdent</b> – nest or promote in the WBS</li>
+                <li><b>setLevel</b> – set absolute outline level</li>
+                <li><b>setMeta</b> – custom task fields</li>
+              </ul>
+              <p>Prefer FS links for sequence, leaf-to-leaf only. Change hierarchy with indent/outdent/setLevel (not by re-adding tasks). Review Apply / Reject before changes land.</p>
+            </div>
+          </div>
+          <div id="chatTokenRing" class="chat-token-ring" title="Context tokens" hidden>
+            <svg viewBox="0 0 36 36" aria-hidden="true">
+              <circle class="chat-token-bg" cx="18" cy="18" r="15.5" pathLength="100"></circle>
+              <circle id="chatTokenArc" class="chat-token-arc" cx="18" cy="18" r="15.5" pathLength="100"></circle>
+            </svg>
+            <span id="chatTokenPct">0%</span>
+          </div>
+        </div>
+        <div class="row chat-toolbar">
+          <button type="button" id="chatClear" title="Clear chat history">Clear chat</button>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-compose">
+          <textarea id="chatInput" rows="3" placeholder="Ask about the plan or request changes…"></textarea>
+          <button type="button" id="chatSend">Send</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="status">
+    <span id="statusInfo"></span>
+    <span id="statusProblem"></span>
+    <span class="spacer"></span>
+    <span id="legend" title="Bar colour compares the progress you entered with the working time already spent"></span>
+  </div>
+</div>
+
+<dialog id="settingsDialog">
+  <div class="dlg-head">Project settings</div>
+  <div class="dlg-body">
+    <label>Project name<input id="sName" autocomplete="off"></label>
+    <div class="sub">Working days</div>
+    <div id="sWorkDays" class="days"></div>
+    <label>Holidays (one date per line)<textarea id="sHolidays" rows="4" spellcheck="false"></textarea></label>
+    <div class="two">
+      <label>Date format
+        <select id="sDateFormat">
+          <option value="dmy">19.08.2026</option>
+          <option value="iso">2026-08-19</option>
+        </select>
+      </label>
+      <div>
+        <label class="chk"><input type="checkbox" id="sCompact">Compact rows</label>
+        <label class="chk"><input type="checkbox" id="sCritical">Mark critical path</label>
+        <label class="chk"><input type="checkbox" id="sDark">Dark mode</label>
+      </div>
+    </div>
+    <div class="sub">Columns</div>
+    <div id="sColumns" class="cols"></div>
+    <div class="sub">Custom field</div>
+    <div class="row">
+      <input id="sNewCol" placeholder="Owner" autocomplete="off">
+      <select id="sNewColType">
+        <option value="text">Text</option>
+        <option value="number">Number</option>
+        <option value="date">Date</option>
+      </select>
+      <button id="sAddCol">Add</button>
+    </div>
+    <div id="sCustomCols" class="cols"></div>
+    <div class="sub">Assistant</div>
+    <p class="hint" id="sGpuHint">Optional local LLM GPU offload (Vulkan: NVIDIA, AMD, Intel).</p>
+    <label class="chk"><input type="checkbox" id="sGpu">Use GPU</label>
+    <label>GPU layers (−1 = all)
+      <input id="sGpuLayers" type="number" min="-1" max="999" step="1" value="-1">
+    </label>
+    <div class="sub">File</div>
+    <div class="row">
+      <button id="sExport">Export JSON</button>
+      <button id="sExportHtml" title="A single view-only HTML file you can send to anyone">Export HTML</button>
+      <button id="sImport">Import JSON</button>
+      <span id="sPath" class="meta"></span>
+    </div>
+    <div class="sub danger">Delete project</div>
+    <div class="danger-zone">
+      <p class="hint">Removes this project from the list. The file is moved to <code>data/.backups/</code> with a timestamp; it is not erased from disk.</p>
+      <p id="sDeleteOnlyHint" class="hint" hidden>You cannot delete the only remaining project.</p>
+      <button type="button" id="sDelete" class="danger">Delete project…</button>
+    </div>
+  </div>
+  <div class="dlg-foot"><button id="sClose">Close</button></div>
+</dialog>
+
+<dialog id="deleteProjectDialog">
+  <div class="dlg-head">Delete project?</div>
+  <div class="dlg-body">
+    <p>This removes <strong id="deleteProjectName"></strong> from your project list and closes it in this window.</p>
+    <p class="hint">Type the project name below to confirm.</p>
+    <label>Type <span id="deleteProjectLabel"></span>
+      <input id="deleteProjectConfirm" autocomplete="off" spellcheck="false">
+    </label>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" id="deleteProjectCancel">Cancel</button>
+    <button type="button" id="deleteProjectOk" class="danger" disabled>Delete project</button>
+  </div>
+</dialog>
+
+<dialog id="newProjectDialog">
+  <div class="dlg-head">New project</div>
+  <div class="dlg-body">
+    <p class="hint">Letters, digits, spaces, and <code>_ . -</code>. At most 64 characters.</p>
+    <label>File name
+      <input id="newProjectName" autocomplete="off" spellcheck="false" maxlength="64">
+    </label>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" id="newProjectCancel">Cancel</button>
+    <button type="button" id="newProjectOk">Create</button>
+  </div>
+</dialog>
+
+<dialog id="deleteTasksDialog">
+  <div class="dlg-head">Delete tasks?</div>
+  <div class="dlg-body">
+    <p id="deleteTasksMessage"></p>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" id="deleteTasksCancel">Cancel</button>
+    <button type="button" id="deleteTasksOk" class="danger">Delete</button>
+  </div>
+</dialog>
+
+<dialog id="clearChatDialog">
+  <div class="dlg-head">Clear chat?</div>
+  <div class="dlg-body">
+    <p>This removes the chat history for this project.</p>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" id="clearChatCancel">Cancel</button>
+    <button type="button" id="clearChatOk" class="danger">Clear chat</button>
+  </div>
+</dialog>
+
+<dialog id="helpDialog">
+  <div class="dlg-head">Help</div>
+  <div class="help-wrap">
+    <nav class="help-nav" id="helpNav">
+      <button data-target="h-start">Getting started</button>
+      <button data-target="h-chart">Reading the chart</button>
+      <button data-target="h-tasks">Tasks and outline</button>
+      <button data-target="h-depends">Depends on</button>
+      <button data-target="h-dates">Dates and calendar</button>
+      <button data-target="h-constraints">Constraints</button>
+      <button data-target="h-critical">Critical path, slack</button>
+      <button data-target="h-keys">Keyboard and mouse</button>
+      <button data-target="h-chat">Chat</button>
+      <button data-target="h-data">Where data lives</button>
+    </nav>
+    <div class="help-body" id="helpBody">
+
+      <section id="h-start">
+        <h2>Getting started</h2>
+        <p>GanttLocal is a project scheduler that runs on your machine. There is no account and no cloud.</p>
+        <ol>
+          <li>Type a task name in the table, press <kbd>Tab</kbd> and give it a number of days.</li>
+          <li>Press <kbd>Ins</kbd> for the next task. Repeat until the work is listed.</li>
+          <li>Select two tasks that must happen one after the other and press <kbd>Ctrl</kbd>+<kbd>L</kbd>. The second one now starts when the first one finishes, and it moves along whenever the first one slips.</li>
+        </ol>
+        <p>Everything is saved automatically into a plain file on your own disk. There is no account and no cloud.</p>
+        <h3>The three ideas worth knowing</h3>
+        <ul>
+          <li><b>Duration, not dates.</b> You give a task a length in working days; dates come out of the plan. That is what makes the chart move by itself when something changes.</li>
+          <li><b>Dependencies.</b> "This can only start once that is done." See <i>Depends on</i>.</li>
+          <li><b>Summaries.</b> Indent tasks under a heading and the heading reports their span and progress. See <i>Tasks and outline</i>.</li>
+        </ul>
+      </section>
+
+      <section id="h-chart">
+        <h2>Reading the chart</h2>
+        <p>Colour is used for exactly one thing: whether a task is as far along as it should be by today. The yardstick is time already spent, so being at 20% is fine on day one of a task and alarming on its last day.</p>
+        <div class="states" id="helpStates"></div>
+        <p>A task counts as behind when it is more than 10 percentage points short of the working time it has already consumed. At risk means it is short by less than that. Anything you mark 100% done stays "done", even if it finished late.</p>
+        <h3>Shapes</h3>
+        <ul>
+          <li><b>Bar</b> - a normal task. The solid part is the share you marked done.</li>
+          <li><b>Diamond</b> - a milestone, a task of zero days. Use it for a decision, a delivery or a deadline.</li>
+          <li><b>Slim bracket</b> - a summary task. It spans its children and cannot be dragged.</li>
+          <li><b>Thin arrow</b> - a dependency, drawn from the driving task to the one that follows.</li>
+          <li><b>Vertical line with a cap in the header</b> - today.</li>
+          <li><b>Light grey columns</b> - non-working days, taken from the calendar in Settings.</li>
+        </ul>
+      </section>
+
+      <section id="h-tasks">
+        <h2>Tasks and outline</h2>
+        <p>A project is one flat list of rows. Indentation, not a separate structure, creates the hierarchy: indent a row and the row above becomes its <b>summary</b>.</p>
+        <ul>
+          <li>A summary has no dates of its own. Its bar starts with the earliest child and ends with the latest, and its progress is the average of its children weighted by their length.</li>
+          <li>Its <code>Days</code>, <code>Start</code> and <code>%</code> cells cannot be edited, because they are results.</li>
+          <li>Click the small <kbd>-</kbd> or <kbd>+</kbd> in front of a summary, or press <kbd>Space</kbd>, to fold it. Folded children still count in every calculation.</li>
+          <li>A <b>milestone</b> is a task of 0 days, shown as a diamond. Set it with the Milestone button or by typing 0 into <code>Days</code>.</li>
+          <li><b>Manual</b> (in the details panel) pins a task to the date you typed and stops predecessors from pushing it. Use it sparingly, it switches the automation off for that row.</li>
+        </ul>
+        <h3>WBS</h3>
+        <p>The <code>WBS</code> column is the outline number, so 2.3 is the third child of the second top-level task. It renumbers itself as you move rows around. The <code>id</code> in the details panel is the permanent number used by dependencies and never changes.</p>
+      </section>
+
+      <section id="h-depends">
+        <h2>Depends on (predecessors)</h2>
+        <p>A dependency says "this task cannot happen until that one has". The task that comes first is called the <b>predecessor</b>; the one waiting is the <b>successor</b>. This is the same idea, and the same wording, as Microsoft Project's <i>Predecessors</i> column.</p>
+        <p>The <code>Depends on</code> cell lists the ids the task waits for: <code>7</code> means "wait for task 7". Several are separated by commas: <code>7, 12</code>. Make one by selecting two rows and pressing <kbd>Ctrl</kbd>+<kbd>L</kbd>, by dragging the dot that appears after a bar onto another bar, or by typing ids into the cell.</p>
+        <p>The point of a dependency is that it keeps holding. Push the predecessor out by three days and everything behind it follows, which is why a plan built from dependencies stays true and a plan built from typed dates does not.</p>
+        <h3>The four types</h3>
+        <p>Written after the id, for example <code>7SS</code>. Plain <code>7</code> means finish to start, which is what you want almost always.</p>
+        <div class="diagrams">
+          <div class="diagram">
+            <b>FS - finish to start</b>
+            <span>B starts after A finishes. The default.</span>
+            <svg width="200" height="46" viewBox="0 0 200 46" aria-hidden="true">
+              <rect x="8" y="6" width="80" height="10" rx="2" fill="#eef1f4" stroke="#c3c8cb"/>
+              <rect x="104" y="28" width="80" height="10" rx="2" fill="#eef1f4" stroke="#c3c8cb"/>
+              <path d="M88 11h8v22h4" fill="none" stroke="#6b7278"/>
+              <path d="M100 30l4 3-4 3z" fill="#6b7278"/>
+            </svg>
+          </div>
+          <div class="diagram">
+            <b>SS - start to start</b>
+            <span>B may start once A starts. For work that runs alongside.</span>
+            <svg width="200" height="46" viewBox="0 0 200 46" aria-hidden="true">
+              <rect x="40" y="6" width="80" height="10" rx="2" fill="#eef1f4" stroke="#c3c8cb"/>
+              <rect x="40" y="28" width="100" height="10" rx="2" fill="#eef1f4" stroke="#c3c8cb"/>
+              <path d="M40 11h-14v22h10" fill="none" stroke="#6b7278"/>
+              <path d="M36 30l4 3-4 3z" fill="#6b7278"/>
+            </svg>
+          </div>
+          <div class="diagram">
+            <b>FF - finish to finish</b>
+            <span>B cannot finish before A does. For work that must end together.</span>
+            <svg width="200" height="46" viewBox="0 0 200 46" aria-hidden="true">
+              <rect x="8" y="6" width="80" height="10" rx="2" fill="#eef1f4" stroke="#c3c8cb"/>
+              <rect x="30" y="28" width="58" height="10" rx="2" fill="#eef1f4" stroke="#c3c8cb"/>
+              <path d="M88 11h14v22h-8" fill="none" stroke="#6b7278"/>
+              <path d="M98 30l-4 3 4 3z" fill="#6b7278"/>
+            </svg>
+          </div>
+          <div class="diagram">
+            <b>SF - start to finish</b>
+            <span>B must be finished by the time A starts. Rare, used for handovers.</span>
+            <svg width="200" height="46" viewBox="0 0 200 46" aria-hidden="true">
+              <rect x="104" y="6" width="80" height="10" rx="2" fill="#eef1f4" stroke="#c3c8cb"/>
+              <rect x="16" y="28" width="80" height="10" rx="2" fill="#eef1f4" stroke="#c3c8cb"/>
+              <path d="M104 11H96v22h4" fill="none" stroke="#6b7278"/>
+              <path d="M96 30l4 3-4 3z" fill="#6b7278"/>
+            </svg>
+          </div>
+        </div>
+        <h3>Delay and overlap (lag)</h3>
+        <p>Add days after the type to wait longer, or negative days to overlap: <code>7FS+2d</code> starts two working days after task 7 ends, <code>7SS-1d</code> starts one day before task 7 starts. Lag is counted in working days.</p>
+        <p>Circular chains are refused: if A waits for B, B cannot be made to wait for A. Should one ever reach the file, the rows involved are shown in red text and named in the status bar.</p>
+      </section>
+
+      <section id="h-dates">
+        <h2>Dates and calendar</h2>
+        <p>Dates are shown as <code>19.08.2026</code>. When typing you may also use <code>19.8.26</code>, <code>19.8.</code> for the current year, or <code>2026-08-19</code>. <i>Settings &gt; Date format</i> switches the display to ISO.</p>
+        <p>Only working days count. A five-day task starting on a Thursday finishes on the following Wednesday. Which weekdays count, and which single days are holidays, is set per project under <i>Settings &gt; Working days</i>. Change either one and the whole plan re-flows.</p>
+        <p>Editing <code>Finish</code> keeps the start and changes the length. Dragging the middle of a bar moves the task; dragging an edge changes its length.</p>
+      </section>
+
+      <section id="h-constraints">
+        <h2>Constraints</h2>
+        <p>By default a task runs as early as its predecessors allow. A constraint overrides that for one row.</p>
+        <table>
+          <tr><th>As soon as possible</th><td>The normal behaviour: follow the predecessors.</td></tr>
+          <tr><th>Start no earlier than</th><td>Never begins before the date, but may begin later if a predecessor is late. This is what you get when you drag a task without predecessors to a later date.</td></tr>
+          <tr><th>Finish no later than</th><td>A deadline. The task is not moved by it, but you are warned in the status bar when it finishes after the date.</td></tr>
+          <tr><th>Must start on</th><td>Nails the task to one date, whatever the predecessors say. If they cannot deliver in time you are warned.</td></tr>
+        </table>
+      </section>
+
+      <section id="h-critical">
+        <h2>Critical path and slack</h2>
+        <p><b>Slack</b> is how many working days a task can slip before it pushes the project's end date. The <code>Slack</code> column shows it per task.</p>
+        <p>The <b>critical path</b> is the chain of tasks with no slack at all: the sequence that decides when the project finishes. Delay any of them by a day and the whole project ends a day later; speed up something off the path and nothing changes. Those rows carry a small marker before the name and a dark outline around the bar, so that colour stays free for progress. Turn the marking off under <i>Settings</i>.</p>
+      </section>
+
+      <section id="h-keys">
+        <h2>Keyboard and mouse</h2>
+        <table>
+          <tr><th>Move around</th><td><kbd>&#8593;</kbd> <kbd>&#8595;</kbd> <kbd>&#8592;</kbd> <kbd>&#8594;</kbd>, <kbd>Tab</kbd> next cell, <kbd>Home</kbd> / <kbd>End</kbd> first and last row</td></tr>
+          <tr><th>Edit a cell</th><td>Start typing, or <kbd>Enter</kbd> / <kbd>F2</kbd>. <kbd>Esc</kbd> cancels, <kbd>Enter</kbd> commits and steps down</td></tr>
+          <tr><th>Rows</th><td><kbd>Ins</kbd> new task, <kbd>Del</kbd> delete, <kbd>Space</kbd> fold or unfold a summary</td></tr>
+          <tr><th>Outline</th><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>&#8594;</kbd> indent, <kbd>&#8592;</kbd> outdent, <kbd>&#8593;</kbd> / <kbd>&#8595;</kbd> move the row</td></tr>
+          <tr><th>Dependencies</th><td><kbd>Ctrl</kbd>+<kbd>L</kbd> chain the selected rows</td></tr>
+          <tr><th>Select</th><td><kbd>Shift</kbd>+click a range, <kbd>Ctrl</kbd>+click single rows, <kbd>Ctrl</kbd>+<kbd>A</kbd> all</td></tr>
+          <tr><th>Undo</th><td><kbd>Ctrl</kbd>+<kbd>Z</kbd>, redo <kbd>Ctrl</kbd>+<kbd>Y</kbd> or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td></tr>
+          <tr><th>Save</th><td>Automatic. <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once</td></tr>
+          <tr><th>Panels</th><td><kbd>F4</kbd> details, <kbd>F1</kbd> this help</td></tr>
+          <tr><th>In the chart</th><td>Drag the middle of a bar to move it, an edge to resize it, the dot after a bar onto another task to link them. Double-click empty space to add a task at that date; double-click a bar for details.</td></tr>
+        </table>
+      </section>
+
+      <section id="h-chat">
+        <h2>Chat</h2>
+        <p><i>Chat</i> opens a dock for the current project. You can ask questions about the plan and request changes. Replies stream token by token as the local model generates them. The assistant proposes structured edits; you <b>Apply</b> or <b>Reject</b> them. Apply is one undo step (<kbd>Ctrl</kbd>+<kbd>Z</kbd> reverses the whole batch) and then auto-saves.</p>
+        <p>Each project keeps its own chat history under <code>data/.assistant/</code>.</p>
+        <p>Chat is optional. Install with <code>python tools/install_assistant.py</code> (CPU) or <code>python tools/install_assistant.py vulkan</code> (GPU via Vulkan), place <code>llm/models/chat.gguf</code>, and see <code>llm/README.md</code>. Turn on <i>Settings &gt; Assistant &gt; Use GPU</i> after the Vulkan install. Without those, the rest of GanttLocal still works.</p>
+      </section>
+
+      <section id="h-data">
+        <h2>Where data lives</h2>
+        <p>Each project is one readable JSON file in the <code>data</code> folder next to the program, for example <code>data/Project.json</code>. Edits are written a moment after you stop typing; previous versions are kept in <code>data/.backups/</code> (last 10 per project).</p>
+        <p>Copy, mail or version those files as you like. <i>Settings &gt; Export JSON</i> writes a copy to your downloads, <i>Import JSON</i> takes one in as a new project. <i>Export HTML</i> writes a single view-only page of the table and chart: no toolbar, no server, no install, just open it. If a file is changed by something else while it is open here, the status bar says <i>file changed</i>: click that label to reload from disk, or <kbd>Ctrl</kbd>+<kbd>S</kbd> to overwrite with this version.</p>
+      </section>
+
+    </div>
+  </div>
+  <div class="dlg-foot"><button id="helpClose">Close</button></div>
+</dialog>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+# Optional Chat (llama-cpp-python). Core GanttLocal uses the stdlib only.
+# CPU wheels: see llm/requirements-assistant.txt
+-r llm/requirements-assistant.txt
