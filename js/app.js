@@ -486,6 +486,14 @@ function moveRows(dir) {
   if (state.model.moveRows(ids, dir)) restoreCursorTo(ids[0]);
 }
 
+function sortTasksByDate() {
+  const task = cursorTask();
+  const startById = new Map();
+  const tasks = state.model.doc.tasks;
+  for (let i = 0; i < tasks.length; i++) startById.set(tasks[i].id, state.sched.start[i]);
+  if (state.model.sortByDate(startById) && task) restoreCursorTo(task.id);
+}
+
 function restoreCursorTo(id) {
   const row = state.model.index().get(id);
   if (row === undefined) return;
@@ -1163,6 +1171,7 @@ function wireUI() {
   el('btnOutdent').onclick = function () { shiftLevel(-1); };
   el('btnUp').onclick = function () { moveRows(-1); };
   el('btnDown').onclick = function () { moveRows(1); };
+  el('btnSortDate').onclick = sortTasksByDate;
   el('btnLink').onclick = linkSelected;
   el('btnUnlink').onclick = unlinkSelected;
   el('btnUndo').onclick = function () { state.model.undo(); requestRender(); };

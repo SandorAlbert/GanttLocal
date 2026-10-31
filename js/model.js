@@ -556,6 +556,36 @@ export class Model {
     });
   }
 
+  /** Sort sibling subtrees by their calculated start date, keeping ties stable. */
+  sortByDate(startById) {
+    const self = this;
+    return this.mutate(function () {
+      const tasks = self.doc.tasks;
+      function sortedLevel(start, end, level) {
+        const blocks = [];
+        for (let i = start; i < end;) {
+          if (tasks[i].level !== level) {
+            i++;
+            continue;
+          }
+          const blockEnd = subtreeEnd(tasks, i);
+          const rows = [tasks[i]].concat(sortedLevel(i + 1, blockEnd, level + 1));
+          const date = startById.get(tasks[i].id);
+          blocks.push({ rows: rows, date: Number.isFinite(date) ? date : Infinity, order: i });
+          i = blockEnd;
+        }
+        blocks.sort(function (a, b) { return a.date - b.date || a.order - b.order; });
+        return blocks.reduce(function (rows, block) { return rows.concat(block.rows); }, []);
+      }
+
+      const sorted = sortedLevel(0, tasks.length, 0);
+      if (sorted.every(function (task, i) { return task === tasks[i]; })) return false;
+      self.doc.tasks = sorted;
+      self._tasksOwned = true;
+      self._idxFor = null;
+    });
+  }
+
   toggleCollapse(id) {
     const task = this.task(id);
     if (!task) return false;

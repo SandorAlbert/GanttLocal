@@ -394,6 +394,23 @@ outline.moveRows([2], 1);
 check('children reorder inside the parent', outline.doc.tasks.map(function (t) { return t.id; }), [1, 3, 2, 4, 5]);
 check('moving several rows at once is refused', outline.moveRows([2, 3], 1), false);
 
+const dateSorted = new Model(doc([
+  { id: 1, level: 0, name: 'Late phase', start: '2026-09-10', duration: 1 },
+  { id: 2, level: 1, name: 'Later child', start: '2026-09-03', duration: 1 },
+  { id: 3, level: 1, name: 'Earlier child', start: '2026-09-01', duration: 1 },
+  { id: 4, level: 0, name: 'Early phase', start: '2026-08-20', duration: 1 },
+  { id: 5, level: 1, name: 'Phase child', start: '2026-08-12', duration: 1 },
+  { id: 6, level: 0, name: 'Middle task', start: '2026-08-25', duration: 1 }
+]));
+dateSorted.sortByDate(new Map([[1, 10], [2, 3], [3, 1], [4, 2], [5, 0], [6, 5]]));
+check('date sort orders sibling subtrees recursively',
+  dateSorted.doc.tasks.map(function (t) { return t.id; }), [4, 5, 6, 1, 3, 2]);
+check('date sort keeps hierarchy levels',
+  dateSorted.doc.tasks.map(function (t) { return t.level; }), [0, 1, 0, 0, 1, 1]);
+dateSorted.undo();
+check('undo restores the pre-sort outline',
+  dateSorted.doc.tasks.map(function (t) { return t.id; }), [1, 2, 3, 4, 5, 6]);
+
 const cascade = new Model(doc([
   { id: 1, level: 0, name: 'Phase', start: '2026-08-24', duration: 1 },
   { id: 2, level: 1, name: 'A', start: '2026-08-24', duration: 2 },
